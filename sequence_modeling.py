@@ -23,7 +23,7 @@ class Sub_BidirectionalLSTM(nn.Module):
         super(Sub_BidirectionalLSTM, self).__init__()
         self.rnn = nn.LSTM(input_size, hidden_size, bidirectional=True, batch_first=True)
         self.linear = nn.Linear(hidden_size * 2, output_size)
-        self.maxpool = nn.MaxPool2d((1, 25), stride=(1, 25))
+        self.maxpoll=nn.MaxPool2d((4,1),(4,1))
 
     def forward(self, input):
         """
@@ -31,17 +31,29 @@ class Sub_BidirectionalLSTM(nn.Module):
         output : contextual feature [batch_size x T x output_size]
         """
         self.rnn.flatten_parameters()
-        recurrents=[self.rnn(input[:,:i,:]) for i in range(1,26)]
-        recurrents_inv=[self.rnn(input[:,j:,:]) for j in range(1,26)]
+        recurrent, _ = self.rnn(input[:,:4,:])  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
+        recurrent2,_=self.rnn(input[:,4:,:])
+        combine_1=torch.cat([recurrent,recurrent2],dim=1)
 
-        pre_recurrents=[recurrent for recurrent, _ in recurrents]
-        suf_recurrents=[recurrent for recurrent, _ in recurrents_inv]
+        recurrent3, _ = self.rnn(input[:, :8, :])  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
+        recurrent4, _ = self.rnn(input[:, 8:, :])
+        combine_2 = torch.cat([recurrent3, recurrent4], dim=1)
 
-        combines=[torch.cat((x,y),dim=1) for x,y in zip(pre_recurrents,suf_recurrents)]
-        combine=torch.cat(combines,dim=2)
-        new_input=self.maxpool(combine)
+        recurrent5, _ = self.rnn(input[:, :12, :])  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
+        recurrent6, _ = self.rnn(input[:, 12:, :])
+        combine_3 = torch.cat([recurrent5, recurrent6], dim=1)
 
-        recurrent, _ = self.rnn(new_input)  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
-        output=self.linear(recurrent)
+        recurrent7, _ = self.rnn(input[:, :16, :])  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
+        recurrent8, _ = self.rnn(input[:, 16:, :])
+        combine_4 = torch.cat([recurrent7, recurrent8], dim=1)
+
+
+        combines=torch.cat([combine_1,combine_2,combine_3,combine_4],dim=1)
+
+        combines=self.maxpoll(combines)
+
+        output = self.linear(combines)  # batch_size x T x output_size
 
         return output
+
+
