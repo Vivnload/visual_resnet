@@ -74,7 +74,6 @@ class Transformer(nn.Module):
 if __name__ == '__main__':
     a=torch.randn(100,26,512)
     print(a.shape)
-    model=Transformer(100)
+    model=Transformer(512)
     b=model(a)
     print(b.shape)
-    print(b)
