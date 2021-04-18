@@ -1,25 +1,45 @@
 import torch.nn as nn
 import torch
 
+
+class BidirectionalLSTM(nn.Module):
+
+    def __init__(self, input_size, hidden_size, output_size):
+        super(BidirectionalLSTM, self).__init__()
+        self.rnn = nn.LSTM(input_size, hidden_size, bidirectional=True, batch_first=True)
+        self.linear = nn.Linear(hidden_size * 2, output_size)
+
+    def forward(self, input):
+        """
+        input : visual feature [batch_size x T x input_size]
+        output : contextual feature [batch_size x T x output_size]
+        """
+        self.rnn.flatten_parameters()
+        recurrent, _ = self.rnn(input)  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
+        output = self.linear(recurrent)  # batch_size x T x output_size
+        return output
+
 class Sub_lstm(nn.Module):
     def __init__(self,input_size,hidden_size,output_size):
         super(Sub_lstm, self).__init__()
         self.rnncell=Sub_lstm_cell(input_size,hidden_size)
         self.liner=nn.Linear(hidden_size*2,output_size)
+        self.max_pool=nn.MaxPool2d((25,1),(25,1))
     def forward(self, input):
         Hi_list=[]
         for i in range(1,26):
             Hi=self.rnncell(input,i)
             Hi_list.append(Hi)
         H_sub=torch.cat(Hi_list,dim=1)
+        H_sub=self.max_pool(H_sub)
         outputs=self.liner(H_sub)
-        output=torch.chunk(outputs,outputs.size(1),dim=1)
+        # output=torch.chunk(outputs,5,dim=1)
         # H_sub=self.max_pool(H_sub)
         # H_sub=H_sub.permute(0,2,1)
         # H_sub=self.liner(H_sub)
         # H_sub = H_sub.permute(0, 2, 1)
 
-        return output
+        return outputs
 
 class Sub_lstm_cell(nn.Module):
     def __init__(self,input_size,hidden_size):
@@ -47,6 +67,11 @@ class Sub_lstm_cell(nn.Module):
         return Hi
 
 
+
+
+
+
+
 class Sub_lstm_layer(nn.Module):
     def __init__(self,input_size,hidden_size):
         super(Sub_lstm_layer,self).__init__()
@@ -67,4 +92,5 @@ if __name__ == '__main__':
     a=torch.randn(100,26,256)
     model=Sub_lstm(256,256,256)
     b=model(a)
+
 

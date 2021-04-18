@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from modules.SubLayer import MultiHeadAttention
 import math
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -10,12 +11,13 @@ class SUBDecoder(nn.Module):
 
     def __init__(self, input_size, hidden_size, output_size):
         super(SUBDecoder, self).__init__()
-        self.first_attention = nn.Linear(input_size, input_size)
+        # self.first_attention = MultiHeadAttention(n_head=26, d_model=input_size,d_k=64,d_v=64)
+        self.first_attention=nn.Linear(input_size,input_size)
         self.second_attention = Attention(input_size, hidden_size, output_size)
 
     def forward(self, x, text, is_train, batch_max_length):
         attention_map = self.first_attention(x)
-        x = x * attention_map
+        x=x*attention_map
         decode_probs = self.second_attention(x, text, is_train, batch_max_length)
         return decode_probs
 

@@ -2,8 +2,8 @@ import torch.nn as nn
 
 from modules.transformation import TPS_SpatialTransformerNetwork
 from modules.feature_extraction import ResNet_FeatureExtractor
-from modules.SUb_bilstm import Sub_lstm
-from modules.SUb_seq_and_predic import Sub_seq_and_pre
+from modules.SUb_seq_and_predic import Sub_seq
+from modules.SUb_decode import SUBDecoder
 import torch
 
 
@@ -30,7 +30,9 @@ class Model(nn.Module):
         """ Visual Features Refinement """
 
         """  Contextual Refinement Block """
-        self.block = Sub_seq_and_pre(self.FeatureExtraction_output, opt.hidden_size,
+        self.seqmodel=Sub_seq(self.FeatureExtraction_output, opt.hidden_size,opt.hidden_size)
+        self.SequenceModeling_output = opt.hidden_size
+        self.decode = SUBDecoder(self.SequenceModeling_output, opt.hidden_size,
                                                              opt.num_class)
     def forward(self, input, attn_text, is_train=True):
         """ Transformation stage """
@@ -44,12 +46,18 @@ class Model(nn.Module):
         visual_feature = visual_feature.squeeze(3)
 
         # Selective Contextual Refinement Block
-        pres = self.block(visual_feature,  attn_text, is_train,
-                                                          self.opt.batch_max_length)
+        visual_feature_splits=torch.chunk(visual_feature,visual_feature.size(1),dim=1)
+        visual_feature_list=[]
+        for visual_feature_split in visual_feature_splits:
+            seq_visual_feature=self.seqmodel(visual_feature_split)
+            visual_feature_list.append(seq_visual_feature)
+        seq_visual_features=torch.cat(visual_feature_list,dim=1)
+
+        pres = self.decode(seq_visual_features,  attn_text, is_train,self.opt.batch_max_length)
 
 
         return pres
 if __name__ == '__main__':
     a=torch.randn(80,1,32,100)
-    model=Sub_lstm(256,256,256)
-    b=model(a)
+    # model=Sub_lstm(256,256,256)
+    # b=model(a)

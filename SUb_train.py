@@ -14,8 +14,8 @@ import numpy as np
 
 from utils import CTCLabelConverter, CTCLabelConverterForBaiduWarpctc, AttnLabelConverter, Averager
 from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
-from SUb_model import Model
-from SUb_test import validation
+from model import Model
+from test import validation
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -163,11 +163,8 @@ def train(opt):
         else:
             preds = model(image, text[:, :-1])  # align with Attention.forward
             target = text[:, 1:]  # without [GO] Symbol
-            cost_star=criterion(preds[0].view(-1, preds[0].shape[-1]), target.contiguous().view(-1))
-            for i,pred in enumerate(preds):
-                if i>0:
-                    cost_star += criterion(pred.view(-1, pred.shape[-1]), target.contiguous().view(-1))
-            cost=cost_star
+            cost = criterion(preds.view(-1, preds.shape[-1]), target.contiguous().view(-1))
+
         model.zero_grad()
         cost.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), opt.grad_clip)  # gradient clipping with 5 (Default)
@@ -238,7 +235,7 @@ if __name__ == '__main__':
     parser.add_argument('--valid_data', required=True, help='path to validation dataset')
     parser.add_argument('--manualSeed', type=int, default=1111, help='for random seed setting')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
-    parser.add_argument('--batch_size', type=int, default=30, help='input batch size')
+    parser.add_argument('--batch_size', type=int, default=80, help='input batch size')
     parser.add_argument('--num_iter', type=int, default=10000, help='number of iterations to train for')
     parser.add_argument('--valInterval', type=int, default=100, help='Interval between each validation')
     parser.add_argument('--saved_model', default='', help="path to model to continue training")

@@ -72,3 +72,8 @@ class MultiHeadAttention(nn.Module):
         q = self.layer_norm(q)
 
         return q, attn
+if __name__ == '__main__':
+    a=torch.randn(100,2,512)
+    model=MultiHeadAttention(n_head=26,d_model=512,d_k=64,d_v=64)
+    b,c=model(a,a,a)
+    print(b.shape)
